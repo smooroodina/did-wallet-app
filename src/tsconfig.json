@@ -16,10 +16,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "react": ["../ext/node_modules/react"],
-      "react-dom": ["../ext/node_modules/react-dom"],
-      "@types/react": ["../ext/node_modules/@types/react"],
-      "@types/react-dom": ["../ext/node_modules/@types/react-dom"]
+      "react": ["../desktop/node_modules/react", "../ext/node_modules/react"],
+      "react-dom": ["../desktop/node_modules/react-dom", "../ext/node_modules/react-dom"],
+      "@types/react": ["../desktop/node_modules/@types/react", "../ext/node_modules/@types/react"],
+      "@types/react-dom": ["../desktop/node_modules/@types/react-dom", "../ext/node_modules/@types/react-dom"]
     },
     "typeRoots": [
       "../ext/node_modules/@types",
@@ -28,6 +28,7 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "types/**/*.d.ts"
   ]
 }

@@ -21,4 +21,11 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
   // You can expose other APTs you need here.
   // ...
+  
+  // App reload function
+  reloadApp: () => ipcRenderer.invoke('reload-app'),
+  windowMinimize: () => ipcRenderer.invoke('window:minimize'),
+  windowToggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
+  windowIsMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  windowClose: () => ipcRenderer.invoke('window:close'),
 })

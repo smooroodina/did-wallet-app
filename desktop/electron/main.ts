@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -28,6 +28,13 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
+    width: 420,
+    height: 700,
+    minWidth: 360,
+    minHeight: 560,
+    frame: false, // remove default frame to create custom titlebar
+    titleBarStyle: 'hidden', // hide default titlebar and overlay buttons; we provide custom ones
+    autoHideMenuBar: true, // hide menu bar like File/Edit/etc
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
@@ -66,3 +73,33 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(createWindow)
+
+// IPC handlers
+ipcMain.handle('reload-app', () => {
+  if (win) {
+    // Perform a hard reload ignoring cache so changes are reflected immediately
+    console.log('Reloading app...')
+    win.webContents.reloadIgnoringCache()
+  }
+})
+
+ipcMain.handle('window:minimize', () => {
+  if (win) win.minimize()
+})
+
+ipcMain.handle('window:toggle-maximize', () => {
+  if (!win) return
+  if (win.isMaximized()) {
+    win.unmaximize()
+  } else {
+    win.maximize()
+  }
+})
+
+ipcMain.handle('window:is-maximized', () => {
+  return win ? win.isMaximized() : false
+})
+
+ipcMain.handle('window:close', () => {
+  if (win) win.close()
+})
