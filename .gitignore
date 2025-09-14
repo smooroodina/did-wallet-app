@@ -106,12 +106,25 @@ temp/
 *.sln
 *.sw?
 
-# Extension specific
-ext/dist/
-desktop/dist/
-desktop/dist-electron/
-
 # Package manager lock files (keep one, remove others if not using)
 # yarn.lock
 # package-lock.json
 # pnpm-lock.yaml
+
+# ============================================
+# Extension (ext/) specific ignores
+# ============================================
+ext/dist/
+ext/build/
+ext/dist-zip/
+ext/.turbo/
+ext/chrome-extension/manifest.js
+ext/chrome-extension/pre-build.tsconfig.tsbuildinfo
+ext/tsconfig.tsbuildinfo
+ext/**/tailwind-output.css
+
+# ============================================
+# Desktop (desktop/) specific ignores  
+# ============================================
+desktop/dist/
+desktop/dist-electron/
