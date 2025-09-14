@@ -1,0 +1,28 @@
+{
+  "name": "did-wallet-app",
+  "version": "1.0.0",
+  "description": "DID Wallet Application - Desktop and Chrome Extension",
+  "private": true,
+  "scripts": {
+    "dev": "start \"Extension Dev\" cmd /k \"cd ext && pnpm dev\" && cd desktop && yarn dev",
+    "dev:desktop": "cd desktop && yarn dev",
+    "dev:ext": "cd ext && pnpm dev",
+    "build": "npm run build:desktop && npm run build:ext",
+    "build:desktop": "cd desktop && yarn build",
+    "build:ext": "cd ext && pnpm build",
+    "start": "npm run dev",
+    "start:desktop": "npm run dev:desktop",
+    "start:ext": "npm run dev:ext",
+    "test": "npm run test:desktop && npm run test:ext",
+    "test:desktop": "echo \"Desktop tests not configured\"",
+    "test:ext": "cd ext && pnpm e2e"
+  },
+  "workspaces": [
+    "src",
+    "desktop", 
+    "ext"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
