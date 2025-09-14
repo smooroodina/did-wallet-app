@@ -1,0 +1,45 @@
+{
+  "students": [
+    {
+      "studentId": "201712345",
+      "name": "Kim Minsoo",
+      "birth": "1998-03-21",
+      "department": "Computer Science",
+      "college": "College of Engineering",
+      "program": "BSc",
+      "admissionYear": 2017,
+      "graduationYear": 2023,
+      "status": "graduated",
+      "nationalId": "980321-1******",
+      "email": "minsoo.kim@cnu.ac.kr"
+    },
+    {
+      "studentId": "201934567",
+      "name": "Lee Jihye",
+      "birth": "2000-11-02",
+      "department": "Business Administration",
+      "college": "College of Economics and Management",
+      "program": "BBA",
+      "admissionYear": 2019,
+      "graduationYear": 2024,
+      "status": "graduated",
+      "nationalId": "001102-2******",
+      "email": "jihye.lee@cnu.ac.kr"
+    },
+    {
+      "studentId": "202045678",
+      "name": "Park Joon",
+      "birth": "2002-06-15",
+      "department": "Electrical Engineering",
+      "college": "College of Engineering",
+      "program": "BEng",
+      "admissionYear": 2020,
+      "graduationYear": null,
+      "status": "enrolled",
+      "nationalId": "020615-1******",
+      "email": "joon.park@cnu.ac.kr"
+    }
+  ]
+}
+
+

@@ -17,11 +17,6 @@
     "test:desktop": "echo \"Desktop tests not configured\"",
     "test:ext": "cd ext && pnpm e2e"
   },
-  "workspaces": [
-    "src",
-    "desktop", 
-    "ext"
-  ],
   "engines": {
     "node": ">=18.0.0"
   }

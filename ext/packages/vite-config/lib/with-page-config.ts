@@ -22,7 +22,14 @@ export const withPageConfig = (config: UserConfig) =>
           'process.env': env,
         },
         base: '',
-        plugins: [react(), IS_DEV && watchRebuildPlugin({ refresh: true }), nodePolyfills()],
+        plugins: [react(), IS_DEV && watchRebuildPlugin({ refresh: true }), nodePolyfills({
+          include: ['process', 'buffer', 'util'],
+          globals: {
+            process: true,
+            Buffer: true,
+          },
+          protocolImports: true,
+        })],
         build: {
           sourcemap: IS_DEV,
           minify: IS_PROD,
@@ -30,7 +37,7 @@ export const withPageConfig = (config: UserConfig) =>
           emptyOutDir: IS_PROD,
           watch: watchOption,
           rollupOptions: {
-            external: ['chrome'],
+            external: ['chrome', 'unenv/node/process'],
           },
         },
       },

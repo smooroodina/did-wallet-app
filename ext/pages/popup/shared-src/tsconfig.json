@@ -19,11 +19,14 @@
       "react": ["../desktop/node_modules/react", "../ext/node_modules/react"],
       "react-dom": ["../desktop/node_modules/react-dom", "../ext/node_modules/react-dom"],
       "@types/react": ["../desktop/node_modules/@types/react", "../ext/node_modules/@types/react"],
-      "@types/react-dom": ["../desktop/node_modules/@types/react-dom", "../ext/node_modules/@types/react-dom"]
+      "@types/react-dom": ["../desktop/node_modules/@types/react-dom", "../ext/node_modules/@types/react-dom"],
+      "ethers": ["../desktop/node_modules/ethers", "../ext/node_modules/ethers"],
+      "@types/chrome": ["../desktop/node_modules/@types/chrome", "../ext/node_modules/@types/chrome"]
     },
+    "types": ["react", "react-dom", "chrome"],
     "typeRoots": [
-      "../ext/node_modules/@types",
-      "../desktop/node_modules/@types"
+      "../desktop/node_modules/@types",
+      "../ext/node_modules/@types"
     ]
   },
   "include": [

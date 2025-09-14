@@ -23,6 +23,7 @@
     "postinstall": "pnpm ready"
   },
   "dependencies": {
+    "react": "^19.1.0",
     "react-error-boundary": "^6.0.0"
   },
   "devDependencies": {
