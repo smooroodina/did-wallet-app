@@ -1,0 +1,13 @@
+{
+  "extends": "@extension/tsconfig/base",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["src/*"],
+      "@shared": ["shared-src"],
+      "@shared/*": ["shared-src/*"]
+    },
+    "types": ["chrome", "node"]
+  },
+  "include": ["src", "vite.config.mts", "tailwind.config.ts"]
+}
