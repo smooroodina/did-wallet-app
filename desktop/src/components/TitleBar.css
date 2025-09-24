@@ -6,7 +6,7 @@
   height: 32px;
   display: flex;
   align-items: center;
-  z-index: 1000;
+  z-index: 10000;
   -webkit-app-region: drag;
   transition: background-color 0.2s, border-color 0.2s;
 }

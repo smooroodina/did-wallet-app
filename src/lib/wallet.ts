@@ -1,8 +1,12 @@
 import type { JsonRpcProvider } from 'ethers'
 import { Wallet, JsonRpcProvider as EthersJsonRpcProvider, type HDNodeWallet } from 'ethers'
 import { DEV_CONFIG, isDevModeEnabled } from '../config/dev.config'
+import { STORAGE_KEYS } from '../config/storage'
+import { storageAdapter } from './storageAdapter'
 import { validatePassword, validateMnemonic, validatePrivateKey, validateWalletConfig } from './validation'
 import { DEFAULT_NETWORKS, type NetworkConfig } from '../types/network'
+import { hdWalletService } from './hdWalletService'
+import { WalletAccount } from '../types/hdWallet'
 export type SupportedNetwork = 'mainnet' | 'sepolia'
 
 export interface StoredState {
@@ -11,29 +15,55 @@ export interface StoredState {
   selectedNetwork?: SupportedNetwork
 }
 
-const STORAGE_KEY = 'wallet.state.v1'
+const STORAGE_KEY = STORAGE_KEYS.walletState
 
 let runtimeWallet: Wallet | HDNodeWallet | null = null
 let currentProvider: JsonRpcProvider | null = null
 
-export function readStoredState(): StoredState {
+async function readStoredState(): Promise<StoredState> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as StoredState) : {}
+    const state = await storageAdapter.get<StoredState>(STORAGE_KEY)
+    return state || {}
   } catch {
     return {}
   }
 }
 
-export function writeStoredState(update: Partial<StoredState>) {
-  const current = readStoredState()
+async function writeStoredState(update: Partial<StoredState>): Promise<void> {
+  const current = await readStoredState()
   const next = { ...current, ...update }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+  await storageAdapter.set(STORAGE_KEY, next)
 }
 
-export function resetStoredState() {
-  try { localStorage.removeItem(STORAGE_KEY) } catch {}
+export async function hasEncryptedKeystore(): Promise<boolean> {
+  const state = await readStoredState()
+  return !!state?.keystoreJson
+}
+
+export async function resetStoredState() {
+  try { await storageAdapter.remove(STORAGE_KEY) } catch {}
   runtimeWallet = null
+}
+
+// 개발/테스트용: 모든 저장소 데이터 초기화
+export async function clearAllStorageData() {
+  try {
+    // 지갑/설정 데이터 삭제 (통일 어댑터 사용)
+    await storageAdapter.remove(STORAGE_KEY)
+    await storageAdapter.remove(STORAGE_KEYS.networks)
+    await storageAdapter.remove(STORAGE_KEYS.currentNetwork)
+    await storageAdapter.remove(STORAGE_KEYS.savedVCs)
+    await storageAdapter.remove(STORAGE_KEYS.lastActiveTab)
+    await storageAdapter.remove(STORAGE_KEYS.theme)
+
+    // 런타임 상태 초기화
+    runtimeWallet = null
+    currentProvider = null
+
+    console.log('모든 저장소 데이터가 초기화되었습니다.')
+  } catch (error) {
+    console.error('저장소 초기화 중 오류:', error)
+  }
 }
 
 export function clearRuntimeWallet() {
@@ -87,7 +117,7 @@ export async function createAndStoreWallet(password: string) {
   
   const wallet = Wallet.createRandom()
   const keystoreJson = await wallet.encrypt(password)
-  writeStoredState({ keystoreJson, address: wallet.address })
+  await writeStoredState({ keystoreJson, address: wallet.address })
   runtimeWallet = wallet
   return wallet.address
 }
@@ -100,13 +130,13 @@ export async function storeWalletWithPassword(wallet: Wallet | HDNodeWallet, pas
   }
   
   const keystoreJson = await wallet.encrypt(password)
-  writeStoredState({ keystoreJson, address: wallet.address })
+  await writeStoredState({ keystoreJson, address: wallet.address })
   runtimeWallet = wallet
   return wallet.address
 }
 
 export async function unlockWithPassword(password: string): Promise<string> {
-  const { keystoreJson } = readStoredState()
+  const { keystoreJson } = await readStoredState()
   if (!keystoreJson) throw new Error('Keystore not found')
   const wallet = await Wallet.fromEncryptedJson(keystoreJson, password)
   const addr = wallet.address
@@ -123,11 +153,11 @@ export function getRuntimeWallet(): Wallet | HDNodeWallet | null {
 }
 
 export async function reencryptWithNewPassword(oldPassword: string, newPassword: string) {
-  const { keystoreJson } = readStoredState()
+  const { keystoreJson } = await readStoredState()
   if (!keystoreJson) throw new Error('Keystore not found')
   const wallet = await Wallet.fromEncryptedJson(keystoreJson, oldPassword)
   const nextJson = await wallet.encrypt(newPassword)
-  writeStoredState({ keystoreJson: nextJson, address: wallet.address })
+  await writeStoredState({ keystoreJson: nextJson, address: wallet.address })
   runtimeWallet = wallet as Wallet | HDNodeWallet
   return wallet.address
 }
@@ -200,4 +230,104 @@ export async function initDevWallet() {
     resetStoredState()
     throw error
   }
+}
+
+// HD Wallet Integration Functions
+
+/**
+ * Initialize HD wallet from mnemonic
+ */
+export async function initializeHDWallet(mnemonic: string, password: string): Promise<boolean> {
+  try {
+    const success = await hdWalletService.initializeFromMnemonic(mnemonic, password);
+    if (success) {
+      // Load the first account as the active wallet
+      const activeAccount = hdWalletService.getActiveAccount();
+      if (activeAccount) {
+        // Get private key for the active account
+        const privateKey = await hdWalletService.getPrivateKeyForAccount(activeAccount.id, password);
+        if (privateKey) {
+          runtimeWallet = new Wallet(privateKey);
+          return true;
+        }
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('Failed to initialize HD wallet:', error);
+    return false;
+  }
+}
+
+/**
+ * Get current active account from HD wallet
+ */
+export function getActiveAccount(): WalletAccount | null {
+  return hdWalletService.getActiveAccount();
+}
+
+/**
+ * Get all accounts from HD wallet
+ */
+export function getAllAccounts(): WalletAccount[] {
+  return hdWalletService.getAccounts();
+}
+
+/**
+ * Switch to a different account
+ */
+export async function switchAccount(accountId: string, password: string): Promise<boolean> {
+  try {
+    const success = await hdWalletService.setActiveAccount(accountId);
+    if (success) {
+      // Get private key for the new active account
+      const privateKey = await hdWalletService.getPrivateKeyForAccount(accountId, password);
+      if (privateKey) {
+        runtimeWallet = new Wallet(privateKey);
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('Failed to switch account:', error);
+    return false;
+  }
+}
+
+/**
+ * Create new account in HD wallet
+ */
+export async function createNewAccount(name?: string, password?: string): Promise<WalletAccount | null> {
+  try {
+    // For now, we'll use a placeholder password - in real implementation,
+    // this should prompt for password or use stored session
+    const result = await hdWalletService.createAccount(name, password || '');
+    return result.success ? result.account : null;
+  } catch (error) {
+    console.error('Failed to create new account:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if HD wallet is initialized
+ */
+export function isHDWalletInitialized(): boolean {
+  return hdWalletService.isInitialized();
+}
+
+/**
+ * Get address from HD wallet (current active account)
+ */
+export function getHDWalletAddress(): string | undefined {
+  const activeAccount = hdWalletService.getActiveAccount();
+  return activeAccount?.address;
+}
+
+/**
+ * Clear HD wallet state
+ */
+export async function clearHDWalletState(): Promise<void> {
+  await hdWalletService.clearState();
+  runtimeWallet = null;
 }

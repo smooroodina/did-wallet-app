@@ -1,11 +1,11 @@
-import { Router } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
 import { SignJWT, jwtVerify } from 'jose'
 
 const authSecret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-secret')
 
 export const authRouter = Router()
 
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', async (req: Request, res: Response) => {
   const { username, password } = req.body || {}
   // Very basic mock login: username=studentId, password=YYYYMMDD(birth)
   if (!username || !password) return res.status(400).json({ error: 'Missing credentials' })
@@ -21,17 +21,17 @@ authRouter.post('/login', async (req, res) => {
   res.json({ ok: true })
 })
 
-authRouter.post('/logout', async (_req, res) => {
+authRouter.post('/logout', async (_req: Request, res: Response) => {
   res.clearCookie('cnu_issuer_token')
   res.json({ ok: true })
 })
 
-export async function requireAuth(req: any, res: any, next: any) {
+export async function requireAuth(req: Request & { user?: { id: string } }, res: Response, next: NextFunction) {
   try {
     const token = req.cookies?.cnu_issuer_token
     if (!token) return res.status(401).json({ error: 'Unauthorized' })
     const { payload } = await jwtVerify(token, authSecret)
-    req.user = { id: payload.sub }
+    req.user = { id: payload.sub as string }
     next()
   } catch {
     return res.status(401).json({ error: 'Unauthorized' })

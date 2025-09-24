@@ -25,7 +25,7 @@ export const DEFAULT_NETWORKS: NetworkConfig[] = [
   {
     chainId: 11155111,
     name: 'Sepolia Testnet',
-    rpcUrl: 'https://rpc.sepolia.org',
+    rpcUrl: 'https://1rpc.io/sepolia',
     symbol: 'ETH',
     explorerUrl: 'https://sepolia.etherscan.io',
     isCustom: false,

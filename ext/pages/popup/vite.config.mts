@@ -18,9 +18,9 @@ export default withPageConfig({
   },
   publicDir: resolve(rootDir, 'public'),
   server: {
-    port: 5174,
+    port: 20250,
     hmr: {
-      port: 8081, // HMR 포트 명시적 설정
+      port: 20250,
     },
   },
   build: {

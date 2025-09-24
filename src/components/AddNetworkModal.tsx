@@ -91,7 +91,7 @@ export const AddNetworkModal: React.FC<AddNetworkModalProps> = ({ onClose, onNet
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay visible" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{editTarget ? '네트워크 수정' : '네트워크 추가'}</h2>
@@ -163,14 +163,14 @@ export const AddNetworkModal: React.FC<AddNetworkModalProps> = ({ onClose, onNet
 
         <div className="modal-footer">
           <button 
-            className="btn-secondary" 
+            className="btn btn-ghost" 
             onClick={onClose}
             disabled={isValidating}
           >
             취소
           </button>
           <button 
-            className="btn-primary" 
+            className="btn btn-primary" 
             onClick={handleSubmit}
             disabled={isValidating}
           >

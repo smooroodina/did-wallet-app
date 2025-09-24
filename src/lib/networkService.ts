@@ -1,46 +1,54 @@
 import { JsonRpcProvider } from 'ethers';
 import { NetworkConfig, NetworkValidationResult, DEFAULT_NETWORKS } from '../types/network';
+import { STORAGE_KEYS } from '../config/storage';
+import { APP_CONFIG } from '../config/app.config';
+import { storageAdapter } from './storageAdapter';
 
 export class NetworkService {
   private networks: NetworkConfig[] = [];
   private currentNetwork: NetworkConfig | null = null;
 
-  constructor() {
-    this.loadNetworks();
-  }
+  constructor() {}
 
-  // Load networks from storage
-  private loadNetworks() {
+  // Initialize networks from storage (LevelDB/IndexedDB or chrome.storage.local)
+  async init() {
     try {
-      const stored = localStorage.getItem('did_wallet_networks');
-      if (stored) {
-        this.networks = JSON.parse(stored);
+      const stored = await storageAdapter.get<NetworkConfig[]>(STORAGE_KEYS.networks);
+      if (stored && Array.isArray(stored) && stored.length) {
+        this.networks = stored;
       } else {
         this.networks = [...DEFAULT_NETWORKS];
-        this.saveNetworks();
+        await this.saveNetworks();
       }
-      
-      // Load current network
-      const currentChainId = localStorage.getItem('did_wallet_current_network');
-      if (currentChainId) {
-        this.currentNetwork = this.networks.find(n => n.chainId === parseInt(currentChainId)) || null;
+
+      const currentChainIdStr = await storageAdapter.get<string>(STORAGE_KEYS.currentNetwork);
+      if (currentChainIdStr) {
+        const cid = parseInt(currentChainIdStr as unknown as string);
+        this.currentNetwork = this.networks.find(n => n.chainId === cid) || null;
       }
-      
+
       if (!this.currentNetwork && this.networks.length > 0) {
-        this.currentNetwork = this.networks.find(n => n.chainId === 11155111) || this.networks[0]; // Default to Sepolia
+        const def = this.networks.find(n => n.chainId === APP_CONFIG.defaults.currentNetworkChainId);
+        this.currentNetwork = def || this.networks[0];
+        await this.saveNetworks();
+      }
+      
+      // Ensure current network is saved after initialization
+      if (this.currentNetwork) {
+        await this.saveNetworks();
       }
     } catch (error) {
       console.error('Failed to load networks:', error);
       this.networks = [...DEFAULT_NETWORKS];
-      this.currentNetwork = this.networks.find(n => n.chainId === 11155111) || this.networks[0];
+      this.currentNetwork = this.networks.find(n => n.chainId === APP_CONFIG.defaults.currentNetworkChainId) || this.networks[0];
     }
   }
 
   // Save networks to storage
-  private saveNetworks() {
-    localStorage.setItem('did_wallet_networks', JSON.stringify(this.networks));
+  private async saveNetworks() {
+    await storageAdapter.set(STORAGE_KEYS.networks, this.networks);
     if (this.currentNetwork) {
-      localStorage.setItem('did_wallet_current_network', this.currentNetwork.chainId.toString());
+      await storageAdapter.set(STORAGE_KEYS.currentNetwork, this.currentNetwork.chainId.toString());
     }
   }
 
@@ -126,6 +134,7 @@ export class NetworkService {
       } else {
         // Add new network
         this.networks.push(newNetwork);
+        // TODO: 새 네트워크의 네이티브 자산을 자산 서비스에 추가 (순환 참조 방지를 위해 임시 제거)
       }
 
       this.saveNetworks();

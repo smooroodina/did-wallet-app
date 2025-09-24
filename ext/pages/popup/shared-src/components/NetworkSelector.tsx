@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { networkService } from '../lib/networkService';
 import { NetworkConfig } from '../types/network';
 import { AddNetworkModal } from './AddNetworkModal';
-
+import { toastManager } from '../utils/toast';
 interface NetworkSelectorProps {
   onNetworkChange?: (network: NetworkConfig) => void;
+  forceClose?: boolean;
+  onDropdownOpen?: () => void;
 }
 
-export const NetworkSelector: React.FC<NetworkSelectorProps> = ({ onNetworkChange }) => {
+export const NetworkSelector = ({ onNetworkChange, forceClose, onDropdownOpen }: NetworkSelectorProps) => {
   const [networks, setNetworks] = useState<NetworkConfig[]>([]);
   const [currentNetwork, setCurrentNetwork] = useState<NetworkConfig | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -17,6 +19,14 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({ onNetworkChang
   useEffect(() => {
     loadNetworks();
   }, []);
+
+  // Close dropdown when forceClose prop changes
+  useEffect(() => {
+    if (forceClose) {
+      setIsDropdownOpen(false);
+      setShowAddModal(false);
+    }
+  }, [forceClose]);
 
   const loadNetworks = () => {
     setNetworks(networkService.getNetworks());
@@ -30,10 +40,13 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({ onNetworkChang
         const newNetwork = networkService.getCurrentNetwork();
         setCurrentNetwork(newNetwork);
         setIsDropdownOpen(false);
-        if (newNetwork && onNetworkChange) onNetworkChange(newNetwork);
+        if (newNetwork && onNetworkChange) {
+          onNetworkChange(newNetwork);
+          toastManager.show('네트워크 전환 성공: ' + newNetwork.name);
+        }
       }
     } catch (e: any) {
-      alert(e?.message || '네트워크 전환에 실패했습니다.');
+      toastManager.show('네트워크 전환 실패: ' + e?.message);
     }
   };
 
@@ -48,6 +61,9 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({ onNetworkChang
     setEditTarget(null);
     setShowAddModal(true);
     setIsDropdownOpen(false);
+    if (onDropdownOpen) {
+      onDropdownOpen(); // Notify parent when modal opens
+    }
   };
 
   const handleEditNetwork = (network: NetworkConfig, e: React.MouseEvent) => {
@@ -55,6 +71,9 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({ onNetworkChang
     setEditTarget(network);
     setShowAddModal(true);
     setIsDropdownOpen(false);
+    if (onDropdownOpen) {
+      onDropdownOpen(); // Notify parent when modal opens
+    }
   };
 
   const handleNetworkAdded = () => {
@@ -64,7 +83,13 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({ onNetworkChang
 
   return (
     <div className="network-selector">
-      <div className="network-current" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+      <div className="network-current" onClick={() => {
+        const newState = !isDropdownOpen;
+        setIsDropdownOpen(newState);
+        if (newState && onDropdownOpen) {
+          onDropdownOpen(); // Notify parent to close other dropdowns
+        }
+      }}>
         <div className="network-info">
           <div className="network-name">{currentNetwork?.name || 'No Network'}</div>
           <div className="network-chain">Chain ID: {currentNetwork?.chainId || 'N/A'}</div>
@@ -75,7 +100,7 @@ export const NetworkSelector: React.FC<NetworkSelectorProps> = ({ onNetworkChang
       {isDropdownOpen && (
         <div className="network-dropdown">
           <div className="network-list">
-            {networks.map((network) => (
+            {networks.map((network: NetworkConfig) => (
               <div
                 key={network.chainId}
                 className={`network-item ${currentNetwork?.chainId === network.chainId ? 'active' : ''}`}

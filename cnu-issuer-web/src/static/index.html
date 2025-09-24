@@ -3,43 +3,111 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CNU Graduation Issuer</title>
+    <title>CNU 졸업증명서 발급 시스템</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <div class="cnu-topbar">
+      <div class="cnu-topbar__inner">
+        <img src="/assets/cnu-logo.svg" alt="CNU" class="cnu-logo" />
+        <div class="cnu-brand">
+          <div class="cnu-brand__title">충남대학교</div>
+          <div class="cnu-brand__subtitle">학사정보 · 증명서 발급</div>
+        </div>
+      </div>
+    </div>
+
     <main class="container">
-      <header>
-        <h1>충남대학교 졸업장 발급 시스템 (DApp)</h1>
+      <header class="cnu-page-header">
+        <h1>졸업증명서 발급 시스템</h1>
+        <p class="subtitle">충남대학교 졸업증명서 조회 및 VC 발급</p>
       </header>
 
       <section class="panel">
-        <h2>1) 중앙 인증 로그인</h2>
-        <div class="row">
-          <input id="username" placeholder="학번 (예: 201712345)" />
-          <input id="password" placeholder="생년월일(YYYYMMDD)" />
-          <button id="loginBtn">로그인</button>
-          <button id="logoutBtn">로그아웃</button>
+        <div class="input-group">
+          <div class="field">
+            <label for="studentId">학번</label>
+            <input id="studentId" value="202012345" />
+          </div>
+          <div class="field">
+            <label for="birth">생년월일</label>
+            <input id="birth" maxlength="10" value="2002-01-01" />
+          </div>
+          <button id="verifyBtn" class="primary-btn">졸업 정보 조회</button>
         </div>
-        <div id="authStatus" class="muted">로그인 상태: 확인 전</div>
       </section>
 
-      <section class="panel">
-        <h2>2) 학적 조회 / 졸업 검증</h2>
-        <button id="fetchProfileBtn">내 학적 조회</button>
-        <pre id="profile"></pre>
-        <button id="verifyBtn">졸업 여부 검증</button>
-        <div id="verifyStatus" class="muted"></div>
+      <section id="certificateSection" class="certificate-panel" style="display: none;">
+        <div class="certificate">
+          <div class="cert-header">
+            <h2>졸업증명서</h2>
+            <div class="university-name">충남대학교 <span id="department" class="student-info"></span> <span id="college" class="student-info"></span></div>
+          </div>
+          
+          <div class="cert-content">
+            <div class="profile-section">
+              <img id="profileImage" src="" alt="프로필 사진" class="profile-img student-info" />
+              <div class="student-info">
+                <div class="info-row">
+                  <span class="label">성명:</span>
+                  <span id="studentName" class="value student-info"></span>
+                </div>
+                <div class="info-row">
+                  <span class="label">학번:</span>
+                  <span id="studentId" class="value student-info"></span>
+                </div>
+                <div class="info-row">
+                  <span class="label">생년월일:</span>
+                  <span id="birth" class="value student-info"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="academic-info">
+              <div class="info-row">
+                <span class="label">학과:</span>
+                <span id="department" class="value student-info"></span>
+              </div>
+              <div class="info-row">
+                <span class="label">학위:</span>
+                <span id="degree" class="value student-info"></span>
+              </div>
+              <div class="info-row">
+                <span class="label">입학년도:</span>
+                <span id="admissionYear" class="value student-info"></span>
+              </div>
+              <div class="info-row">
+                <span class="label">졸업년도:</span>
+                <span id="graduationYear" class="value student-info"></span>
+              </div>
+              <div class="info-row">
+                <span class="label">졸업상태:</span>
+                <span id="status" class="value status-badge student-info"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cert-footer">
+            <div class="issue-date">발급일: <span id="issueDate"></span></div>
+            <div class="issuer">충남대학교 총장</div>
+          </div>
+        </div>
+
+        <div class="vc-section">
+          <h3>증명서(VC) 발급</h3>
+          <div class="vc-input-group">
+            <input id="walletAddress" placeholder="지갑 주소 (0x...)" />
+            <button id="genAddrBtn" class="vc-btn" type="button">지갑 연결</button>
+            <button id="issueBtn" class="vc-btn" type="button">VC 발급(지갑 등록)</button>
+          </div>
+          <div id="vcResult" class="vc-result"></div>
+        </div>
       </section>
 
-      <section class="panel">
-        <h2>3) VC 발급</h2>
-        <input id="walletAddress" placeholder="지갑 주소 (0x...)" />
-        <button id="issueBtn">VC 발급</button>
-        <pre id="vcOut"></pre>
-      </section>
+      <div id="errorMessage" class="error-panel" style="display: none;"></div>
     </main>
 
-    <script src="/main.js" type="module"></script>
+    <script src="/main.js"></script>
   </body>
   </html>
 
