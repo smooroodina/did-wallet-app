@@ -54,7 +54,7 @@ export const AddVCModal: React.FC<AddVCModalProps> = ({ onClose, onAddVC }) => {
       } else {
         setError(`VC 검증 실패: ${verification.errors.join(', ')}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       setError(`검증 중 오류 발생: ${err.message}`);
     } finally {
       setIsVerifying(false);
@@ -120,7 +120,7 @@ export const AddVCModal: React.FC<AddVCModalProps> = ({ onClose, onAddVC }) => {
                 <div className="verification-errors">
                   <h4>오류:</h4>
                   <ul>
-                    {verificationResult.errors.map((error, index) => (
+                    {verificationResult.errors.map((error: string, index: number) => (
                       <li key={index}>{error}</li>
                     ))}
                   </ul>
@@ -131,7 +131,7 @@ export const AddVCModal: React.FC<AddVCModalProps> = ({ onClose, onAddVC }) => {
                 <div className="verification-warnings">
                   <h4>경고:</h4>
                   <ul>
-                    {verificationResult.warnings.map((warning, index) => (
+                    {verificationResult.warnings.map((warning: string, index: number) => (
                       <li key={index}>{warning}</li>
                     ))}
                   </ul>

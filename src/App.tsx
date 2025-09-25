@@ -31,7 +31,7 @@ declare global {
     };
   };
 }
-import { createAndStoreWallet, getAddress, getProvider, importWalletFromMnemonic, importWalletFromPrivateKey, initDevWallet, isUnlocked, lockWallet, resetStoredState, unlockWithPassword, clearAllStorageData, hasEncryptedKeystore } from './lib/wallet';
+import { createAndStoreWallet, getAddress, getProvider, importWalletFromMnemonic, importWalletFromPrivateKey, initDevWallet, isUnlocked, lockWallet, resetStoredState, unlockWithPassword, clearAllStorageData, hasEncryptedKeystore, getWalletType } from './lib/wallet';
 import { hdWalletService } from './lib/hdWalletService';
 import { isDevModeEnabled } from './config/dev.config';
 import { STORAGE_KEYS } from './config/storage';
@@ -125,6 +125,7 @@ const AppContent = ({ platform = 'desktop', extensionActions, onThemeChange }: A
   // HD Wallet states
   const [activeAccount, setActiveAccount] = useState<WalletAccount | null>(null);
   const [showAccountManager, setShowAccountManager] = useState(false);
+  const [walletType, setWalletType] = useState<'mnemonic' | 'privateKey' | null>(null);
   const [addressRequest, setAddressRequest] = useState<{
     origin: string;
   } | null>(null);
@@ -605,11 +606,17 @@ const AppContent = ({ platform = 'desktop', extensionActions, onThemeChange }: A
       }
       setNetworksInitialized(true);
       
-      // Initialize HD wallet
-      await hdWalletService.loadState();
-      const currentAccount = hdWalletService.getActiveAccount();
-      if (currentAccount) {
-        setActiveAccount(currentAccount);
+      // 지갑 타입 확인
+      const walletType = await getWalletType();
+      setWalletType(walletType);
+      
+      // 니모닉 기반 지갑인 경우에만 HD 지갑 초기화
+      if (walletType === 'mnemonic') {
+        await hdWalletService.loadState();
+        const currentAccount = hdWalletService.getActiveAccount();
+        if (currentAccount) {
+          setActiveAccount(currentAccount);
+        }
       }
       
       // Check if wallet exists to determine initial step
@@ -842,57 +849,39 @@ const AppContent = ({ platform = 'desktop', extensionActions, onThemeChange }: A
     setShowDataResetConfirm(true);
   };
 
-  const handleLockOnly = () => {
-    // 런타임 잠금만 수행 (저장 데이터는 유지)
+
+  const lockWalletAndClearMemory = () => {
+    // 메모리상의 지갑 개인정보 초기화
     lockWallet();
-    setUnlocked(false);
-    setStep('login');
-    setShowMenu(false);
-    setForceCloseDropdowns((prev: boolean) => !prev);
-    if (platform === 'extension' && typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'WALLET_LOCKED' }).catch(() => {});
-    }
-    toastManager.show('지갑이 잠금되었습니다.');
-  };
-
-  const handleLogoutConfirm = () => {
-    // 지갑 잠금만 수행 (데이터는 유지)
-    lockWallet();
-    setUnlocked(false);
-    setPassword('');
-    setConfirm('');
-    setMnemonic('');
-    setPrivateKey('');
-    setStep('login');
-    setForceCloseDropdowns((prev: boolean) => !prev);
-    if (platform === 'extension' && typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'WALLET_LOCKED' }).catch(() => {});
-    }
-    toastManager.show('지갑이 잠금되었습니다.');
-  };
-
-  const handleDataResetConfirm = () => {
-    // 모든 저장소 데이터 초기화 (지갑 연결 정보 포함)
-    clearAllStorageData();
-
-    // 상태 초기화
     setUnlocked(false);
     setAddress('');
     setPassword('');
     setConfirm('');
     setMnemonic('');
     setPrivateKey('');
-    // Step will be set by useEffect based on hasEncryptedKeystore()
-    setShowDataResetConfirm(false);
+    setStep('login');
     setForceCloseDropdowns((prev: boolean) => !prev);
-
+    
     // 백그라운드 스크립트에 잠금 알림
     if (platform === 'extension' && typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage({ type: 'WALLET_LOCKED' }).catch(() => {
-        // Ignore errors if background script is not available
-      });
+      chrome.runtime.sendMessage({ type: 'WALLET_LOCKED' }).catch(() => {});
     }
+  };
 
+  const handleLogoutConfirm = () => {
+    // 지갑 잠금만 수행 (데이터는 유지)
+    lockWalletAndClearMemory();
+    toastManager.show('지갑이 잠금되었습니다.');
+  };
+
+  const handleDataResetConfirm = () => {
+    // 모든 저장소 데이터 초기화 (지갑 연결 정보 포함)
+    clearAllStorageData();
+    
+    // 메모리상의 지갑 개인정보 초기화
+    lockWalletAndClearMemory();
+    
+    setShowDataResetConfirm(false);
     toastManager.show('모든 데이터가 초기화되었습니다.');
   };
 
@@ -964,7 +953,7 @@ const AppContent = ({ platform = 'desktop', extensionActions, onThemeChange }: A
                onDropdownOpen={() => setShowMenu(false)} // Close menu when network dropdown opens
              />
           )}
-          {unlocked && activeAccount ? (
+          {unlocked && activeAccount && walletType === 'mnemonic' ? (
             <AccountSelector 
               onAccountChange={(account: WalletAccount) => {
                 setActiveAccount(account);
@@ -979,7 +968,14 @@ const AppContent = ({ platform = 'desktop', extensionActions, onThemeChange }: A
               <div 
                 className="mm-header__account-info" 
                 onClick={() => {
-                  console.log('Account info clicked:', { unlocked, activeAccount, hdInitialized: hdWalletService.isInitialized() });
+                  console.log('Account info clicked:', { 
+                    unlocked, 
+                    activeAccount, 
+                    walletType, 
+                    hdInitialized: hdWalletService.isInitialized(),
+                    showAccountManager: showAccountManager
+                  });
+                  console.log('Setting showAccountManager to true');
                   setShowAccountManager(true);
                 }}
                 title={unlocked ? "계정 관리" : ""}
@@ -1036,7 +1032,7 @@ const AppContent = ({ platform = 'desktop', extensionActions, onThemeChange }: A
               {showMenu && (
                 <div className="menu-dropdown" role="menu">
                   <button className="mm-menu__item" role="menuitem" onClick={() => { setShowMenu(false); setActiveTab('activity'); }}>설정</button>
-                  {activeAccount && (
+                  {walletType === 'mnemonic' && (
                     <button className="mm-menu__item" role="menuitem" onClick={() => { setShowMenu(false); setShowAccountManager(true); }}>계정 관리</button>
                   )}
                   <button className="mm-menu__item" role="menuitem" onClick={handleLogoutRequest}>로그아웃</button>
@@ -1384,6 +1380,7 @@ const AppContent = ({ platform = 'desktop', extensionActions, onThemeChange }: A
             setActiveAccount(account);
             setAddress(account.address);
           }}
+          walletType={walletType}
         />
       </div>
     </div>

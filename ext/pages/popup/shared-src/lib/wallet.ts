@@ -9,10 +9,13 @@ import { hdWalletService } from './hdWalletService'
 import { WalletAccount } from '../types/hdWallet'
 export type SupportedNetwork = 'mainnet' | 'sepolia'
 
+export type WalletType = 'mnemonic' | 'privateKey'
+
 export interface StoredState {
   keystoreJson?: string
   address?: string
   selectedNetwork?: SupportedNetwork
+  walletType?: WalletType
 }
 
 const STORAGE_KEY = STORAGE_KEYS.walletState
@@ -38,6 +41,16 @@ async function writeStoredState(update: Partial<StoredState>): Promise<void> {
 export async function hasEncryptedKeystore(): Promise<boolean> {
   const state = await readStoredState()
   return !!state?.keystoreJson
+}
+
+export async function getWalletType(): Promise<WalletType | null> {
+  const state = await readStoredState()
+  return state?.walletType || null
+}
+
+export async function isMnemonicWallet(): Promise<boolean> {
+  const walletType = await getWalletType()
+  return walletType === 'mnemonic'
 }
 
 export async function resetStoredState() {
@@ -81,15 +94,14 @@ export function getAddress(): string | undefined {
   if (isDevModeEnabled()) {
     return DEV_CONFIG.wallet.address
   }
-  return runtimeWallet?.address || readStoredState().address
+  return runtimeWallet?.address
 }
 
 export function getSelectedNetwork(): SupportedNetwork {
   if (isDevModeEnabled()) {
     return DEV_CONFIG.network
   }
-  const state = readStoredState()
-  return state.selectedNetwork || 'mainnet'
+  return 'mainnet' // 기본값 반환, 실제 네트워크는 networkService에서 관리
 }
 
 export function setSelectedNetwork(net: SupportedNetwork) {
@@ -117,7 +129,11 @@ export async function createAndStoreWallet(password: string) {
   
   const wallet = Wallet.createRandom()
   const keystoreJson = await wallet.encrypt(password)
-  await writeStoredState({ keystoreJson, address: wallet.address })
+  await writeStoredState({ 
+    keystoreJson, 
+    address: wallet.address, 
+    walletType: 'mnemonic' // 새로 생성된 지갑은 니모닉 기반
+  })
   runtimeWallet = wallet
   return wallet.address
 }
@@ -136,11 +152,23 @@ export async function storeWalletWithPassword(wallet: Wallet | HDNodeWallet, pas
 }
 
 export async function unlockWithPassword(password: string): Promise<string> {
-  const { keystoreJson } = await readStoredState()
+  const state = await readStoredState()
+  const { keystoreJson, walletType } = state
   if (!keystoreJson) throw new Error('Keystore not found')
   const wallet = await Wallet.fromEncryptedJson(keystoreJson, password)
   const addr = wallet.address
   runtimeWallet = wallet.connect(getProvider()) as Wallet | HDNodeWallet
+  
+  // 니모닉 기반 지갑인 경우 HD 지갑 서비스 초기화
+  if (walletType === 'mnemonic' && 'mnemonic' in wallet && wallet.mnemonic) {
+    try {
+      const mnemonic = wallet.mnemonic.phrase
+      await hdWalletService.initializeFromMnemonic(mnemonic, password)
+    } catch (error) {
+      console.warn('Failed to initialize HD wallet service:', error)
+    }
+  }
+  
   return addr
 }
 
@@ -175,7 +203,14 @@ export async function importWalletFromMnemonic(mnemonic: string, password: strin
   }
   
   const wallet = Wallet.fromPhrase(mnemonic.trim().toLowerCase())
-  return storeWalletWithPassword(wallet, password)
+  const keystoreJson = await wallet.encrypt(password)
+  await writeStoredState({ 
+    keystoreJson, 
+    address: wallet.address, 
+    walletType: 'mnemonic' 
+  })
+  runtimeWallet = wallet
+  return wallet.address
 }
 
 export async function importWalletFromPrivateKey(privateKey: string, password: string) {
@@ -192,7 +227,14 @@ export async function importWalletFromPrivateKey(privateKey: string, password: s
   
   const cleanKey = privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`
   const wallet = new Wallet(cleanKey)
-  return storeWalletWithPassword(wallet, password)
+  const keystoreJson = await wallet.encrypt(password)
+  await writeStoredState({ 
+    keystoreJson, 
+    address: wallet.address, 
+    walletType: 'privateKey' 
+  })
+  runtimeWallet = wallet
+  return wallet.address
 }
 
 export async function initDevWallet() {

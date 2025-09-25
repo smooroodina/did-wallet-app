@@ -7,9 +7,11 @@ interface AccountManagerProps {
   isOpen: boolean;
   onClose: () => void;
   onAccountChange?: (account: WalletAccount) => void;
+  walletType?: 'mnemonic' | 'privateKey' | null;
 }
 
-export const AccountManager: React.FC<AccountManagerProps> = ({ isOpen, onClose, onAccountChange }: AccountManagerProps) => {
+export const AccountManager: React.FC<AccountManagerProps> = ({ isOpen, onClose, onAccountChange, walletType }: AccountManagerProps) => {
+  console.log('AccountManager rendered:', { isOpen, walletType, hdInitialized: hdWalletService.isInitialized() });
   const [accounts, setAccounts] = useState<WalletAccount[]>([]);
   const [activeAccount, setActiveAccount] = useState<WalletAccount | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -170,11 +172,17 @@ export const AccountManager: React.FC<AccountManagerProps> = ({ isOpen, onClose,
         </div>
 
         <div className="modal-body">
-          {!hdWalletService.isInitialized() ? (
+          {walletType === 'privateKey' ? (
+            <div className="account-empty-state">
+              <div className="empty-state-icon">🔐</div>
+              <h4>HD 지갑 기능을 사용할 수 없습니다</h4>
+              <p>개인키로 등록된 지갑은 HD 지갑 기능을 지원하지 않습니다.<br/>니모닉으로 지갑을 생성하거나 가져와야 합니다.</p>
+            </div>
+          ) : !hdWalletService.isInitialized() ? (
             <div className="account-empty-state">
               <div className="empty-state-icon">🔐</div>
               <h4>HD 지갑이 초기화되지 않았습니다</h4>
-              <p>먼저 니모닉으로 지갑을 생성하거나 가져와야 합니다.</p>
+              <p>니모닉으로 지갑을 생성하거나 가져와야 합니다.</p>
             </div>
           ) : accounts.length === 0 ? (
             <div className="account-empty-state">
